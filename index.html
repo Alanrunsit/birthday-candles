@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday!</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+ <body>
+    <h1 class="page-title">
+        Happy Birthday!
+    </h1>
+    <div class="content">
+        <div class="webcam">
+            <video id="webcam" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="cake-area">
+            <img src="assets/cake_bg.png" alt="" class="cake-bg">
+            <img src="assets/cake_unlit.gif" alt="" class="cake">
+            <img src="assets/match.gif" alt="" class="match">
+        </div>
+        <p class="instructions">
+            Use your hand to light the cake, then
+            blow out the candles!
+        </p>
+    </div>
+    <p class="signature">
+        alanrunsit, inspo from:
+        <a href="https://instagram.com/pikacodes">@pikacodes</a>
+    </p>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.10.0/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="script.js"></script>
+ </body>
+</html>

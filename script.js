@@ -4,14 +4,67 @@ const ctx = canvas.getContext("2d");
 const match = document.querySelector(".match");
 const cakeArea = document.querySelector(".cake-area");
 const cakeImg = document.querySelector(".cake");
+const retryButton = document.getElementById("retry-btn");
+let debugLabel = null;
+let lastDebugMessage = "";
 
 // Constants
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-const WEBCAM_WIDTH = isMobile ? 240 : 300;
-const WEBCAM_HEIGHT = isMobile ? 180 : 225;
+const WEBCAM_WIDTH = isMobile ? 280 : 520;
+const WEBCAM_HEIGHT = isMobile ? 210 : 390;
 const BLOW_THRESHOLD = 70; // how sensitive mic is
 const BLOW_HOLD_MS = 240; // how long the blow must be held to put out the candle
-const LIGHT_DISTANCE = 20; // how close match needs to be to light the candles
+const LIGHT_DISTANCE = 30; // how close match needs to be to light the candles
+let hands = null;
+
+function showRetryButton() {
+    if (!retryButton) return;
+    retryButton.disabled = false;
+    retryButton.classList.add("is-visible");
+}
+
+function hideRetryButton() {
+    if (!retryButton) return;
+    retryButton.disabled = true;
+    retryButton.classList.remove("is-visible");
+}
+
+function handleRetryPress(event) {
+    if (event) event.preventDefault();
+    resetGame();
+}
+
+function ensureDebugLabel() {
+    if (debugLabel) return debugLabel;
+
+    debugLabel = document.getElementById("debug-status");
+    if (!debugLabel) {
+        debugLabel = document.createElement("p");
+        debugLabel.id = "debug-status";
+        debugLabel.style.position = "fixed";
+        debugLabel.style.top = "10px";
+        debugLabel.style.left = "10px";
+        debugLabel.style.padding = "6px 10px";
+        debugLabel.style.borderRadius = "8px";
+        debugLabel.style.background = "rgba(5, 31, 194, 0.1)";
+        debugLabel.style.border = "1px solid rgba(5, 31, 194, 0.3)";
+        debugLabel.style.color = "#051fc2";
+        debugLabel.style.fontFamily = "Inter, sans-serif";
+        debugLabel.style.fontSize = "12px";
+        debugLabel.style.zIndex = "2000";
+        debugLabel.style.pointerEvents = "none";
+        document.body.appendChild(debugLabel);
+    }
+
+    return debugLabel;
+}
+
+function setDebugStatus(message) {
+    if (lastDebugMessage === message) return;
+    lastDebugMessage = message;
+    ensureDebugLabel().textContent = `Debug: ${message}`;
+    console.log(`[debug] ${message}`);
+}
 
 // Set drawing size for the overlay canvas.
 canvas.width = WEBCAM_WIDTH;
@@ -23,45 +76,52 @@ let isHandDetected = false; // quick boolean flag (currently placeholder)
 let isCakelit = false; // true after candles are lit
 let isCandlesBlownOut = false; // true after player blows candles out
 
-const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-  });
-
-  // Configure tracker behavior and confidence thresholds.
-hands.setOptions({
-    maxNumHands: 1, 
-    modelComplexity: isMobile ? 0 : 1, 
-    minDetectionConfidence: isMobile ? 0.6 : 0.7, 
-    minTrackingConfidence: isMobile ? 0.4 : 0.5 
-});
-
-//Hand Tracking
-hands.onResults((results) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(results.image, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        const landmarks = results.multiHandLandmarks[0];
-        isHandDetected = true;
-
-        //get index fingertip
-        const indexTip = landmarks[8];
-        handPosition = {
-            x: 1-indexTip.x,
-            y: indexTip.y
-        };
-
-        updateMatchPosition();
-        
-        checkCandleLight();
-    }   else {
-        isHandDetected = false;
+function initHands() {
+    if (typeof Hands === "undefined") {
+        setDebugStatus("MediaPipe Hands failed to load");
+        return false;
     }
-});
+
+    hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`
+    });
+
+    hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: isMobile ? 0 : 1,
+        minDetectionConfidence: isMobile ? 0.6 : 0.7,
+        minTrackingConfidence: isMobile ? 0.4 : 0.5
+    });
+
+    hands.onResults((results) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(results.image, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            const landmarks = results.multiHandLandmarks[0];
+            isHandDetected = true;
+            setDebugStatus("camera active, hand detected");
+
+            //get index fingertip
+            const indexTip = landmarks[8];
+            handPosition = {
+                x: 1 - indexTip.x,
+                y: indexTip.y
+            };
+
+            updateMatchPosition();
+            checkCandleLight();
+        } else {
+            isHandDetected = false;
+        }
+    });
+
+    return true;
+}
 
 //Match
 function updateMatchPosition() {
@@ -76,6 +136,16 @@ function updateMatchPosition() {
     match.style.left = `${matchX}px`;
     match.style.top = `${matchY}px`;
 }
+
+function placeMatchAtStart() {
+    if (!match || !cakeArea) return;
+    const cakeRect = cakeArea.getBoundingClientRect();
+    const matchWidth = match.getBoundingClientRect().width || 40;
+    const startX = cakeRect.width / 2 - matchWidth / 2;
+    const startY = cakeRect.height * 0.7;
+    match.style.left = `${startX}px`;
+    match.style.top = `${startY}px`;
+    }
 
 //Candle Light
 function checkCandleLight() {
@@ -106,6 +176,7 @@ function lightCake() {
     isCakelit = true;
     cakeImg.src = "assets/cake_lit.gif";
     match.style.display = "none";
+    showRetryButton();
 }
 
 function blowOutCandles() {
@@ -114,6 +185,20 @@ function blowOutCandles() {
 
     isCandlesBlownOut = true;
     cakeImg.src = "assets/cake_unlit.gif";
+    showRetryButton();
+    setDebugStatus("candles blown out - tap Retry");
+}
+
+function resetGame() {
+    if (!cakeImg || !match) return;
+    isCakelit = false;
+    isCandlesBlownOut = false;
+    isHandDetected = false;
+    cakeImg.src = "assets/cake_unlit.gif";
+    match.style.display = "block";
+    placeMatchAtStart();
+    hideRetryButton();
+    setDebugStatus("game reset - light the cake again");
 }
 
 //Blow Detection
@@ -124,6 +209,7 @@ let isBlowDetectionActive = false;
 
 async function initBlowDetection() {
     try {
+        setDebugStatus("requesting microphone permission");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -134,8 +220,10 @@ async function initBlowDetection() {
         microphone.connect(analyser);
 
         isBlowDetectionActive = true;
+        setDebugStatus("microphone active");
         detectBlow();
     } catch (error) {
+        setDebugStatus(`microphone error: ${error.name || "unknown"}`);
         console.error("Error accessing microphone :", error);
     }
 }
@@ -159,6 +247,7 @@ function detectBlow() {
 //Camera
 async function setupCamera() {
     try {
+        setDebugStatus("requesting camera permission");
         const stream = await navigator.mediaDevices.getUserMedia({ 
             video: {
                 width: WEBCAM_WIDTH,
@@ -167,13 +256,23 @@ async function setupCamera() {
             },
          });
 
+         video.muted = true;
          video.srcObject = stream;
+         setDebugStatus("camera stream received");
 
-         video.onloadedmetadata = () => {
-            video.play();
-            startHandTracking();
+         video.onloadedmetadata = async () => {
+            setDebugStatus("camera metadata loaded");
+            try {
+                await video.play();
+                setDebugStatus("camera playing");
+                startHandTracking();
+            } catch (error) {
+                setDebugStatus(`video play failed: ${error.name || "unknown"}`);
+                console.error("Video play failed:", error);
+            }
          };
     } catch (error) {
+        setDebugStatus(`camera error: ${error.name || "unknown"}`);
         console.error("Error accessing webcam:", error);
         alert("Could not access webcam. Please check your camera permissions.");
     }
@@ -181,18 +280,50 @@ async function setupCamera() {
 
 //Hand Tracking
 function startHandTracking() {
+    if (!hands) {
+        setDebugStatus("cannot start tracking: Hands not initialized");
+        return;
+    }
+    if (typeof Camera === "undefined") {
+        setDebugStatus("MediaPipe Camera utils failed to load");
+        return;
+    }
+    setDebugStatus("starting hand tracking");
     const camera = new Camera(video, {
         onFrame: async () => {
-            await hands.send({ image: video });
+            try {
+                await hands.send({ image: video });
+            } catch (error) {
+                setDebugStatus(`hand tracking error: ${error.name || "unknown"}`);
+                console.error("Hand tracking frame failed:", error);
+            }
         },
         width: WEBCAM_WIDTH,
         height: WEBCAM_HEIGHT
     });
 
     camera.start();
+    setDebugStatus("hand tracking loop running");
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
+    ensureDebugLabel();
+    setDebugStatus("page loaded");
+    if (!video || !canvas || !ctx || !match || !cakeArea || !cakeImg) {
+        setDebugStatus("missing required DOM elements");
+        return;
+    }
+    if (!window.isSecureContext) {
+        setDebugStatus("insecure context: use http://localhost");
+    }
+    const handsReady = initHands();
+    if (!handsReady) return;
+    placeMatchAtStart();
+    hideRetryButton();
+    if (retryButton) {
+        retryButton.addEventListener("click", handleRetryPress);
+        retryButton.addEventListener("touchend", handleRetryPress, { passive: false });
+    }
     setupCamera();
 
     if (isMobile) {
@@ -207,6 +338,12 @@ window.addEventListener("DOMContentLoaded", async () => {
         );
     } else {
         initBlowDetection();
+    }
+});
+
+window.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() === "r" && isCandlesBlownOut) {
+        resetGame();
     }
 });
 

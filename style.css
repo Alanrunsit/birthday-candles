@@ -13,13 +13,15 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .page-title {
-    font-size: 2rem;
+    font-size: clamp(1.8rem, 3.6vw, 2.9rem);
     color: #051fc2;
     font-family: "Pixelify Sans", sans-serif;
     letter-spacing: 0.05em;
+    padding-top: 0.25rem;
 }
 
 .inter {
@@ -33,21 +35,26 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-top: 2rem;
+    padding-top: 0.8rem;
 }
 
 .webcam {
     position: relative;
-    width: 300px;
-    height: 225px;
+    width: min(68vw, 460px);
+    aspect-ratio: 4 / 3;
+}
+
+#webcam {
+    display: none;
 }
 
 #canvas {
     position: absolute;
     top: 0;
     left: 0;
-    width: 300px;
+    width: 100%;
     height: 100%;
+    z-index: 2;
 }
 
 .cake-area {
@@ -56,44 +63,78 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 300px;
-    height: 200px;
-    margin-top: -2rem;
+    width: min(68vw, 460px);
+    height: min(42vw, 280px);
+    margin-top: -2.1rem;
 }
 
 .cake-bg {
     position: absolute;
-    width: 300px;
+    width: 100%;
 }
 
 .cake {
     position: absolute;
-    width: 100px;
+    width: min(28vw, 190px);
 }
 .match {
     position: absolute;
-    width: 40px;
+    width: min(11vw, 72px);
     pointer-events: none;
     transition: left 0.05s ease-out, top 0.05s ease-out;
     z-index: 10;
 }
 
 .instructions {
-    font-size: 0.6rem;
+    font-size: clamp(0.8rem, 1.1vw, 0.95rem);
     color: #051fc2;
     font-family: "Inter", sans-serif;
     font-style: italic;
     font-weight: 400;    
     text-align: center;
+    max-width: 520px;
+    line-height: 1.25;
+    padding-bottom: 0.7rem;
+}
+
+.retry-btn {
+    display: inline-flex;
+    margin-top: 0.2rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid #051fc2;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #051fc2;
+    font-family: "Inter", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    z-index: 30;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.retry-btn:hover {
+    background: #051fc2;
+    color: #ffffff;
+}
+
+.retry-btn.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .signature {
     position: absolute;
-    bottom: 1rem;
+    bottom: 1.2rem;
     left: 0;
     margin-bottom: 1rem;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     font-family: "Inter", sans-serif;
     font-weight: 600;
     text-align: center;
+    padding-left: 0.6rem;
 }
